@@ -1,0 +1,1 @@
+three 0.186.1 (r186), copied from npm package 'three'. Addon imports rewritten to relative paths.
