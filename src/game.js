@@ -2,7 +2,7 @@
 // (renderer, view-model, audio and HUD are optional).
 import * as THREE from '../vendor/three/three.module.js';
 import { Materials } from './materials.js';
-import { buildWorld, WIN_ZONE, CAMERA_SHOTS } from './world.js';
+import { buildWorld, WIN_ZONE, CAMERA_SHOTS, CHECKPOINTS } from './world.js';
 import { Player, P } from './player.js';
 import { EnemyManager } from './enemies.js';
 import { Effects } from './effects.js';
@@ -109,7 +109,9 @@ export class Game {
     this.fx.reset();
     this.bullets.length = 0;
     this.gun = { type: 'smg', mag: WEAPONS.smg.mag, reserve: WEAPONS.smg.reserve, cd: 0, reloading: false, reloadT: 0, reloadDur: 0, pumpT: -1, bloom: 0, triggerHeld: false, reloadEvents: [] };
-    this.stats = { time: 0, kills: 0, headshots: 0, shots: 0, hits: 0 };
+    this.stats = { time: 0, kills: 0, headshots: 0, shots: 0, hits: 0, deaths: 0 };
+    this.cpIndex = 0;
+    this._saveCheckpoint(0, false);
     this.time = 0;
     this.lastPlayerShot = -99;
     this.recoilP = 0; this.recoilY = 0; this.shake = 0; this.deathT = 0; this.hitFlash = 0;
@@ -211,6 +213,7 @@ export class Game {
       for (const ev of pl.events) this._playerEvent(ev);
       this._weapon(dt, input);
       this._interact(input);
+      this._checkpoints();
       if (this._inWinZone()) this._win();
     } else if (this.state === 'dead') {
       pl.update(dt, {}, this);
@@ -230,6 +233,44 @@ export class Game {
     this._bullets(dt);
     this.fx.update(dt, this.camera, this.bullets);
     this.hitFlash = Math.max(0, this.hitFlash - dt);
+  }
+
+  // ------------------------------------------------------------------ checkpoints / respawn
+  _checkpoints() {
+    const p = this.player.pos;
+    for (let i = CHECKPOINTS.length - 1; i > this.cpIndex; i--) {
+      if (CHECKPOINTS[i].at(p)) { this._saveCheckpoint(i, true); break; }
+    }
+  }
+
+  _saveCheckpoint(i, announce) {
+    this.cpIndex = i;
+    const g = this.gun;
+    this.checkpoint = { cp: CHECKPOINTS[i], gun: { type: g.type, mag: g.mag, reserve: g.reserve } };
+    if (announce) this.hud.toast('Checkpoint: ' + CHECKPOINTS[i].label);
+  }
+
+  get checkpointLabel() { return this.checkpoint ? this.checkpoint.cp.label : 'Roof'; }
+
+  // Come back at the last checkpoint: full health, the gun you had there (never empty),
+  // kills stay dead, survivors go back to their posts.
+  respawn() {
+    const { cp, gun } = this.checkpoint;
+    this.player.reset(cp.pose);
+    const w = WEAPONS[gun.type];
+    Object.assign(this.gun, { type: gun.type, mag: w.mag, reserve: Math.max(gun.reserve, w.mag), cd: 0.3, reloading: false, reloadT: 0, pumpT: -1, bloom: 0 });
+    for (const e of this.enemies.list) if (e.alive) e.reset();
+    this.bullets.length = 0;
+    this.recoilP = 0; this.recoilY = 0; this.shake = 0; this.deathT = 0; this.hitFlash = 0; this.adsT = 0;
+    this.deathCard = false;
+    this.fireHeldPrev = false;
+    this.lastPlayerShot = -99;
+    if (this.vm) { this.vm.resetAnim(); this.vm.setGun(gun.type, true); }
+    this.hud.ammo(this.gun.mag, this.gun.reserve, w.name);
+    this.hud.prompt(null);
+    this.hud.hideCards();
+    this.state = 'playing';
+    this._updateCamera(0);
   }
 
   _inWinZone() {
@@ -517,6 +558,7 @@ export class Game {
 
   _die() {
     this.state = 'dead';
+    this.stats.deaths++;
     this.deathT = 0;
     this.deathCard = false;
     this.deathStart = { y: this.camera.position.y, pitch: this.player.pitch, roll: 0 };
@@ -529,11 +571,11 @@ export class Game {
     this.won = true;
     const s = this.stats;
     const acc = s.shots ? s.hits / s.shots : 0;
-    const score = Math.round(1000 + s.kills * 100 + s.headshots * 75 + acc * 600 + Math.max(0, 600 - s.time) * 3);
+    const score = Math.max(0, Math.round(1000 + s.kills * 100 + s.headshots * 75 + acc * 600 + Math.max(0, 600 - s.time) * 3 - s.deaths * 250));
     const prev = loadBest();
     const best = Math.max(prev, score);
     if (score > prev) saveBest(score);
-    this.result = { time: s.time, kills: s.kills, headshots: s.headshots, accuracy: acc, score, best, newBest: score > prev, total: this.enemies.list.length };
+    this.result = { time: s.time, kills: s.kills, headshots: s.headshots, accuracy: acc, score, best, newBest: score > prev, total: this.enemies.list.length, deaths: s.deaths };
     this.audio.play('win', { gain: 0.8, bus: 'ui' });
     this.hud.prompt(null);
     this.hud.showWin(this.result);

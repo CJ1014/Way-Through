@@ -50,6 +50,22 @@ Open `index.html?test=1` to expose a debug API on `window.__oneshot`, or
 | V | Toggle visual style (works mid-fight) |
 | Esc | Pause |
 
+## Respawn (added after the brief)
+
+Dying no longer throws you back to the roof. Each area you reach becomes your checkpoint:
+roof, stair room, kitchen, canteen, yard, and past the water tower. A "Checkpoint" toast
+shows when that happens. The death card tells you where you'll come back.
+
+**Respawn** (the black double-bordered button) puts you back at the last checkpoint:
+- with full health;
+- holding the gun you had there, with a full magazine and never empty;
+- with every enemy you killed still dead;
+- with the survivors back at their posts at full health, so you don't reappear in a
+  crossfire.
+
+**Try again from the roof** restarts the whole run. Deaths are counted, shown on the win
+card, and cost 250 points each.
+
 ## Footage: reproduced vs. inferred
 
 **No gameplay footage was attached to this request or the repository, so nothing here was
@@ -105,7 +121,8 @@ against the real thing.
   readout.
 - Death: the gun drops away, the camera falls and rolls toward the sky, and the screen fades
   light grey → grey → charcoal. Then a card: handwritten "No way through.", a black
-  double-bordered "Try again" button, and links for Mission, Controls and Settings.
+  double-bordered button, and links for Mission, Controls and Settings. (The button now says
+  **Respawn**, and "Try again" moved to the second button. See *Respawn* below.)
 - Win card: "Way through." with time, kills, headshots, accuracy, score and best score.
 - Two styles, switchable live. Materials are shared per role and recoloured in place. The
   choice is saved in localStorage. In Classic, each role's emissive is set to its own colour.
@@ -214,9 +231,16 @@ src/
 
 What I ran, all from this repo. The test scripts are in `tests/`.
 
-- **Map checks in Node** (`tests/world-check.js`): builds the map without WebGL, then
-  validates all 7 door swings, the nav connectivity (0 unreachable nodes) and that the A*
-  route from the roof spawn reaches the North Gate.
+- **Map checks in Node** (`tests/world-check.js`): builds the map without WebGL, then checks:
+  - all 7 door swings;
+  - that no waypoint sits inside a door's swing, so an open door can never block the path;
+  - nav connectivity (0 unreachable nodes);
+  - that the A* route from the roof spawn reaches the North Gate.
+- **Respawn logic in Node** (`tests/respawn-check.js`), 17 checks:
+  - every checkpoint pose is on floor and clear of props;
+  - checkpoints only ever move forward;
+  - respawn restores health and position, keeps kills dead, resets survivors, never hands
+    you an empty gun, and clears enemy bullets.
 - **Headless route simulation in Node** (`tests/route-sim.js`): the real simulation, no
   rendering, with the bot fighting through the real input path.
   - At normal difficulty with **no god mode**, the bot usually wins (14 kills, 70–100 s of
@@ -240,9 +264,11 @@ What I ran, all from this repo. The test scripts are in `tests/`.
     and after switching back. The snapshot covers player position, health, ammo, every
     enemy, ragdoll points, decals, pools, pickups, doors and bullets. The same material
     objects are reused, and the scene isn't rebuilt.
-  - Death: the fade, then the "No way through." card with Try again and
-    Mission/Controls/Settings. The Mission overlay opens. Try again gives a fresh run
-    (15 enemies, 0 decals, back on the roof).
+  - Death: the fade, then the "No way through." card with Respawn, Try again and
+    Mission/Controls/Settings. The Mission overlay opens.
+  - **Respawn** after dying in the canteen brings you back at the canteen checkpoint with
+    full health, the enemy you killed still dead, and pointer lock re-acquired.
+  - Try again gives a fresh run (15 enemies, 0 decals, back on the roof).
   - Walking through the North Gate shows the "Way through." card with all six stats.
   - **The autopilot plays the whole route in the browser and wins:**
     roof → stair → kitchen → canteen → yard → North Gate, fighting on the way (god mode on,
@@ -281,6 +307,7 @@ Re-run the tests:
 npm install
 npx esbuild tests/world-check.js --bundle --platform=node --format=esm --outfile=tests/out/world-check.mjs && node tests/out/world-check.mjs
 npx esbuild tests/route-sim.js  --bundle --platform=node --format=esm --outfile=tests/out/route-sim.mjs  && node tests/out/route-sim.mjs
+npx esbuild tests/respawn-check.js --bundle --platform=node --format=esm --outfile=tests/out/respawn-check.mjs && node tests/out/respawn-check.mjs
 node tests/e2e.cjs && node tests/lock.cjs     # needs Playwright + Chromium
 ```
 

@@ -97,6 +97,16 @@ function startRun() {
   input.active = true;
 }
 
+function respawnRun() {
+  audio.resume();
+  if (!input.fallback && !bot) input.requestLock(); // inside the click handler
+  game.respawn();
+  ui.hideCards();
+  ui.showHud(true);
+  input.clear();
+  input.active = true;
+}
+
 function mainMenu() {
   game.state = 'menu';
   input.active = false;
@@ -128,6 +138,7 @@ ui = new UI(game, {
   play: () => startRun(),
   resume: () => resume(),
   restart: () => startRun(),
+  respawn: () => respawnRun(),
   mainMenu,
   setStyle: (s) => game.applyStyle(s),
   settingsChanged: (k) => { audio.applyVolumes(); if (k === 'quality' || k === '*') resize(); },
@@ -237,6 +248,7 @@ window.__oneshot = {
   setStyle: (s) => game.applyStyle(s),
   toggleStyle: () => game.toggleStyle(),
   start: () => startRun(),
+  respawn: () => respawnRun(),
   pause: () => pauseGame(),
   resume: () => doResume(),
   mainMenu,

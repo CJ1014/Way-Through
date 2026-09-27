@@ -109,18 +109,34 @@ const want = (k) => !only.length || only.includes(k);
 
   if (want('death')) {
     // ---------------- death: gun drops, camera falls and rolls up, light grey -> grey -> charcoal, card
-    await ev(() => { const G = __oneshot.game; G.god = false; G._playerHit(1000, G.player.pos.x + 3, G.player.pos.z); });
+    // die in the canteen after killing someone, so the respawn has something to prove
+    await ev(() => {
+      const G = __oneshot.game; G.god = true; G.state = 'playing';
+      __oneshot.teleport(-5, 0, -16, 0, 0);
+      for (let i = 0; i < 5; i++) G.update(1 / 60, {});
+      const k = G.enemies.list.find((e) => e.spawn.id === 'C1'); if (k.alive) G.enemies._kill(k, 0, 0, -1, null);
+      G.god = false; G._playerHit(1000, G.player.pos.x + 3, G.player.pos.z);
+    });
     for (const t of [0.5, 1.7, 2.5, 3.2]) { await page.waitForFunction((t) => __oneshot.game.deathT >= t, t, { timeout: 20000 }); await shot('death-' + t); }
     await page.waitForFunction(() => !document.getElementById('deathcard').classList.contains('hidden'), null, { timeout: 20000 });
     await page.waitForTimeout(300);
     await shot('death-card');
-    const d = await ev(() => ({ state: __oneshot.game.state, text: document.querySelector('#deathcard .hand').textContent, btn: document.querySelector('#deathcard .btn-double').textContent, links: [...document.querySelectorAll('#deathcard .links a')].map((a) => a.textContent).join(' ') }));
-    check('death card: "No way through." + Try again + Mission/Controls/Settings', d.state === 'dead' && d.text === 'No way through.' && d.btn === 'Try again' && d.links === 'Mission Controls Settings', JSON.stringify(d));
+    const d = await ev(() => ({ state: __oneshot.game.state, text: document.querySelector('#deathcard .hand').textContent, btn: document.querySelector('#deathcard .btn-double').textContent, restart: document.querySelector('#deathcard .restart').textContent, at: document.querySelector('#deathcard .respawn-at').textContent, links: [...document.querySelectorAll('#deathcard .links a')].map((a) => a.textContent).join(' ') }));
+    check('death card: "No way through." + Respawn + Try again + Mission/Controls/Settings', d.state === 'dead' && d.text === 'No way through.' && d.btn === 'Respawn' && d.restart === 'Try again from the roof' && /Canteen/.test(d.at) && d.links === 'Mission Controls Settings', JSON.stringify(d));
     await page.click('#deathcard .links a:nth-child(1)');
     await page.waitForTimeout(300);
     await shot('death-mission-overlay');
     await page.click('#overlay .back');
+    // Respawn at the checkpoint
     await page.click('#deathcard .btn-double');
+    await page.waitForTimeout(700);
+    const rs = await ev(() => { const G = __oneshot.game; return { state: G.state, hp: G.player.health, x: G.player.pos.x, z: G.player.pos.z, c1: G.enemies.list.find((e) => e.spawn.id === 'C1').alive, deaths: G.stats.deaths, locked: __oneshot.input.locked || __oneshot.input.fallback, card: !document.getElementById('deathcard').classList.contains('hidden') }; });
+    check('Respawn: back in the canteen with full health, the kill stays dead, lock re-acquired', rs.state === 'playing' && rs.hp === 100 && Math.abs(rs.x + 5) < 0.3 && Math.abs(rs.z + 13.6) < 0.3 && rs.c1 === false && rs.deaths === 1 && rs.locked && !rs.card, JSON.stringify(rs));
+    await shot('respawned');
+    // die again and take the full restart instead
+    await ev(() => { const G = __oneshot.game; G._playerHit(1000, G.player.pos.x + 3, G.player.pos.z); });
+    await page.waitForFunction(() => !document.getElementById('deathcard').classList.contains('hidden'), null, { timeout: 120000 });
+    await page.click('#deathcard .restart');
     await page.waitForTimeout(700);
     const r = await ev(() => { const G = __oneshot.game; return { state: G.state, hp: G.player.health, x: G.player.pos.x, z: G.player.pos.z, alive: G.enemies.list.filter((e) => e.alive).length, decals: G.fx.decalCount }; });
     check('Try again restarts a fresh run', r.state === 'playing' && r.hp === 100 && r.alive === 15 && r.decals === 0 && Math.abs(r.x + 16) < 0.5, JSON.stringify(r));
@@ -135,7 +151,7 @@ const want = (k) => !only.length || only.includes(k);
     await page.waitForTimeout(500);
     await shot('win-card');
     const w = await ev(() => ({ text: document.querySelector('#wincard .hand').textContent, rows: [...document.querySelectorAll('#wincard .row span')].map((s) => s.textContent) }));
-    check('walking through the North Gate wins: "Way through." + stats', w.text === 'Way through.' && ['Time', 'Kills', 'Headshots', 'Accuracy', 'Score', 'Best score'].every((k) => w.rows.includes(k)), JSON.stringify(w));
+    check('walking through the North Gate wins: "Way through." + stats', w.text === 'Way through.' && ['Time', 'Kills', 'Headshots', 'Deaths', 'Accuracy', 'Score', 'Best score'].every((k) => w.rows.includes(k)), JSON.stringify(w));
     await page.click('#wincard .btn-double');
     await page.waitForTimeout(500);
   }

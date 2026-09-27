@@ -865,6 +865,17 @@ export const ENEMY_SPAWNS = [
   { id: 'Y8', x: -8, y: 0, z: -91, yaw: 3.14, weapon: 'shotgun', area: 'gate', patrol: [[-8, -91], [8, -91]] },
 ];
 
+// Respawn checkpoints, in route order. Reaching an area makes it your checkpoint (only ever
+// moving forward); dying lets you respawn at the latest one.
+export const CHECKPOINTS = [
+  { id: 'roof', label: 'Roof', at: () => true, pose: { x: -16, y: ROOF_Y, z: 4.5, yaw: -Math.PI / 2 + 0.22, pitch: 0 } },
+  { id: 'stairRoom', label: 'Stair room', at: (p) => p.y < 0.5 && p.x > 0.1 && p.x < 8.9 && p.z < 0 && p.z > -11.9, pose: { x: 3.5, y: 0, z: -9.2, yaw: Math.PI / 2, pitch: 0 } },
+  { id: 'kitchen', label: 'Kitchen', at: (p) => p.y < 0.5 && p.x > -9.9 && p.x < -0.1 && p.z < 0 && p.z > -11.9, pose: { x: -1.6, y: 0, z: -8.5, yaw: 0.77, pitch: 0 } },
+  { id: 'canteen', label: 'Canteen', at: (p) => p.y < 0.5 && p.x > -23.7 && p.x < 11.7 && p.z < -12.1 && p.z > -27.7, pose: { x: -5, y: 0, z: -13.6, yaw: 0, pitch: 0 } },
+  { id: 'yard', label: 'Yard', at: (p) => p.z < -28.5 && p.z > -66, pose: { x: 2, y: 0.03, z: -30.8, yaw: 0, pitch: 0 } },
+  { id: 'tower', label: 'Water tower', at: (p) => p.z <= -66 && p.z > -96, pose: { x: 0, y: 0.03, z: -68.2, yaw: 0, pitch: 0 } },
+];
+
 // Named viewpoints (used for the menu previews and the automated screenshot pass).
 export const CAMERA_SHOTS = {
   roof: { pos: [-16, 6.65, 4.5], look: [3.5, 6.2, 0] },

@@ -140,6 +140,7 @@ export class UI {
   }
 
   showDeathCard() {
+    this.respawnAt.textContent = 'You’ll respawn at: ' + this.G.checkpointLabel;
     this.deathCard.classList.remove('hidden');
     this.hooks.releaseMouse();
   }
@@ -148,7 +149,7 @@ export class UI {
     const fmtT = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}.${String(Math.floor((s % 1) * 10))}`;
     this.winStats.innerHTML = '';
     const rows = [
-      ['Time', fmtT(r.time)], ['Kills', `${r.kills} / ${r.total}`], ['Headshots', String(r.headshots)],
+      ['Time', fmtT(r.time)], ['Kills', `${r.kills} / ${r.total}`], ['Headshots', String(r.headshots)], ['Deaths', String(r.deaths || 0)],
       ['Accuracy', Math.round(r.accuracy * 100) + '%'], ['Score', String(r.score)], ['Best score', String(r.best) + (r.newBest ? '  — new best' : '')],
     ];
     for (const [k, v] of rows) this.winStats.append(h('div', { class: 'row' + (k === 'Score' ? ' score' : '') }, h('span', {}, k), h('b', {}, v)));
@@ -229,7 +230,10 @@ export class UI {
     this.deathCard = h('div', { id: 'deathcard', class: 'cardwrap hidden' },
       h('div', { class: 'card' },
         handEl('No way through.', 46, 'big'),
-        h('button', { class: 'btn-double', onclick: (e) => { this.hooks.uiSound('uiClick'); this.hooks.restart(e); } }, 'Try again'),
+        h('div', { class: 'row-btns' },
+          h('button', { class: 'btn-double respawn', onclick: (e) => { this.hooks.uiSound('uiClick'); this.hooks.respawn(e); } }, 'Respawn'),
+          h('button', { class: 'btn-plain restart', onclick: (e) => { this.hooks.uiSound('uiClick'); this.hooks.restart(e); } }, 'Try again from the roof')),
+        this.respawnAt = h('div', { class: 'respawn-at' }, ''),
         h('div', { class: 'links' },
           h('a', { href: '#', onclick: (e) => { e.preventDefault(); this.openOverlay('mission'); } }, 'Mission'),
           h('a', { href: '#', onclick: (e) => { e.preventDefault(); this.openOverlay('controls'); } }, 'Controls'),
