@@ -131,6 +131,8 @@ const input = new Input(renderer.domElement, {
   },
   onKey: (code) => {
     if (code === 'KeyV' && game.state !== 'menu') game.toggleStyle();
+    // death: Space / Enter / R respawn (skips the rest of the fade)
+    if (game.state === 'dead' && game.deathT > 0.8 && ['Space', 'Enter', 'KeyR'].includes(code)) respawnRun();
   },
 });
 
@@ -148,6 +150,9 @@ ui = new UI(game, {
 ui.styleChanged(game.style);
 ui.showMain(true);
 ui.showHud(false);
+// a click anywhere on the dark death screen (not on a card link/button) also respawns
+ui.deathCard.addEventListener('click', (e) => { if (e.target === ui.deathCard && game.state === 'dead') respawnRun(); });
+document.getElementById('app').addEventListener('mousedown', (e) => { if (game.state === 'dead' && game.deathT > 0.8 && !ui.deathCard.contains(e.target) && !ui.overlayHost.contains(e.target)) respawnRun(); });
 
 // ------------------------------------------------------------------ sizing / quality
 function resize() {

@@ -219,7 +219,7 @@ export class Game {
       pl.update(dt, {}, this);
       this.deathT += dt;
       this.hud.death(this.deathT);
-      if (this.deathT > 3.9 && !this.deathCard) { this.deathCard = true; this.hud.showDeathCard(); }
+      if (this.deathT > 2.4 && !this.deathCard) { this.deathCard = true; this.hud.showDeathCard(); }
     }
     this._tick(dt, true);
     this._updateCamera(dt, input);

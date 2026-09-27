@@ -1,0 +1,24 @@
+const { chromium } = require('playwright');
+const path = require('path');
+(async () => {
+  const b = await chromium.launch({ args: ['--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader','--ignore-gpu-blocklist'] });
+  const page = await b.newPage({ viewport: { width: 800, height: 450 } });
+  const errs = []; page.on('pageerror', e => errs.push(e.message));
+  await page.goto('file://' + path.resolve(__dirname, '..', 'index.html') + '?test=1');
+  await page.waitForTimeout(2500);
+  await page.click('#menu .nav-btn[data-id="play"]');
+  const die = () => page.evaluate(() => { const G = __oneshot.game; G._playerHit(1000, G.player.pos.x + 2, G.player.pos.z); });
+  const st = () => page.evaluate(() => ({ st: __oneshot.game.state, hp: __oneshot.game.player.health, deaths: __oneshot.game.stats.deaths }));
+  await die(); await page.waitForFunction(() => __oneshot.game.deathT > 1, null, { timeout: 60000 });
+  await page.keyboard.press('Space'); await page.waitForTimeout(500);
+  console.log('Space respawn', JSON.stringify(await st()));
+  await die(); await page.waitForFunction(() => __oneshot.game.deathT > 1, null, { timeout: 60000 });
+  await page.mouse.click(60, 60); await page.waitForTimeout(500);
+  console.log('click respawn', JSON.stringify(await st()));
+  await die(); await page.waitForFunction(() => !document.getElementById('deathcard').classList.contains('hidden'), null, { timeout: 90000 });
+  console.log('card shown at deathT', await page.evaluate(() => __oneshot.game.deathT.toFixed(1)));
+  await page.click('#deathcard .btn-double'); await page.waitForTimeout(500);
+  console.log('button respawn', JSON.stringify(await st()));
+  console.log(errs.join('\n') || 'no page errors');
+  await b.close();
+})();

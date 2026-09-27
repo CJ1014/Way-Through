@@ -118,7 +118,7 @@ export class UI {
 
   // Death: gun drops, camera falls; screen fades light grey -> grey -> charcoal.
   death(t) {
-    const stops = [[0, [255, 255, 255], 0], [1.3, [215, 215, 215], 0.0], [2.0, [200, 200, 200], 0.55], [2.7, [128, 128, 128], 0.8], [3.4, [40, 40, 40], 0.97]];
+    const stops = [[0, [255, 255, 255], 0], [0.8, [215, 215, 215], 0.0], [1.3, [200, 200, 200], 0.55], [1.8, [128, 128, 128], 0.8], [2.3, [40, 40, 40], 0.97]];
     let a = stops[0], b = stops[stops.length - 1];
     for (let i = 0; i < stops.length - 1; i++) if (t >= stops[i][0] && t <= stops[i + 1][0]) { a = stops[i]; b = stops[i + 1]; break; }
     if (t > stops[stops.length - 1][0]) a = b;
@@ -234,6 +234,7 @@ export class UI {
           h('button', { class: 'btn-double respawn', onclick: (e) => { this.hooks.uiSound('uiClick'); this.hooks.respawn(e); } }, 'Respawn'),
           h('button', { class: 'btn-plain restart', onclick: (e) => { this.hooks.uiSound('uiClick'); this.hooks.restart(e); } }, 'Try again from the roof')),
         this.respawnAt = h('div', { class: 'respawn-at' }, ''),
+        h('div', { class: 'respawn-at' }, 'Press Space or click anywhere to respawn'),
         h('div', { class: 'links' },
           h('a', { href: '#', onclick: (e) => { e.preventDefault(); this.openOverlay('mission'); } }, 'Mission'),
           h('a', { href: '#', onclick: (e) => { e.preventDefault(); this.openOverlay('controls'); } }, 'Controls'),
